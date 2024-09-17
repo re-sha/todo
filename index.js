@@ -8,7 +8,7 @@ const {z} = require("zod")
 
 async function connectToDB() {
     try{
-        const response = await mongoose.connect("mongodb+srv://admin:V9sy6pcZGHFuFoQO@cluster0.bpeos.mongodb.net/")
+        const response = await mongoose.connect("mongodb+srv://admin:V9sy6pcZGHFuFoQO@cluster0.bpeos.mongodb.net/todo-app-database")
         if(response)
             console.log("Successfully connected to DB")    
     }
@@ -22,34 +22,47 @@ const app = express();
 app.use(express.json()); //while passing body in post this is required to be able to read the request/response 
 
 app.post("/signup", async function(req,res){
-    //zod input validation
-    // const req.body = z.object({
-    //     name: z.string().min(5),
-    //     email: z.string().email(),
-    //     password:z.string().min(6).max(14)
-    // })
+    const requiredBody = z.object({  //TOOD: checks for password
+        name: z.string().min(3).max(12),
+        email: z.string().email(),
+        password: z.string().min(6,'Password should be at least 6 characters').max(14, 'Password should be less than 14 characters')
+    })
 
-
-    const name = req.body.name;
-    const email = req.body.email;
-    const password = req.body.password;
-
-    // const hashedPassword = await bcrypt.hash(password, 5)
-    // console.log(hashedPassword);
+    const parsedDataWithSuccess = requiredBody.safeParse(req.body);
+    if (!parsedDataWithSuccess.success) {
+        res.status(400).json({
+            msg: "Incorrect format",
+            errors: parsedDataWithSuccess.error.errors //returns all validation errors
+        })
+        return
+    }
+    
+    const {name, email, password} = parsedDataWithSuccess.data;
 
     try {
+        const existingUser = await UserModel.findOne({
+            email: email
+        })
+        if(existingUser) {
+            return res.status(409).json({
+                msg: "User already exists",
+                error: "User with email address already exists"
+            })
+        }
+        const hash = await bcrypt.hash(password, 7);
+
         await UserModel.create({
             name: name,
             email: email,
-            password: password
+            password: hash
         });
-        res.json({
-            msg: "Successfuly signed up"
+        res.status(201).json({
+            msg: "Successfully signed up"
         })
     }
     catch(error) {
         console.log("Error creating account", error);
-        return res.json({
+        return res.status(500).json({
             msg: "Could not create account",
             error: error.message
         })
