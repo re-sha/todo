@@ -8,7 +8,7 @@ const {z} = require("zod")
 
 async function connectToDB() {
     try{
-        const response = await mongoose.connect("mongodb+srv://admin:V9sy6pcZGHFuFoQO@cluster0.bpeos.mongodb.net/todo-app-database")
+        const response = await mongoose.connect("")
         if(response)
             console.log("Successfully connected to DB")    
     }
